@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>WB SKU Checker — Админка лицензий</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0f1115; --card: #151922; --muted: #9aa4b2; --text: #e7ecf3; --acc: #6aa9ff; --ok:#2ecc71; --err:#e74c3c;
+      --br: 14px;
+    }
+    *{ box-sizing: border-box; }
+    body{ margin:0; background:var(--bg); color:var(--text); font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .wrap{ max-width: 980px; margin: 24px auto; padding: 0 16px; }
+    h1{ margin:0 0 16px; font-size:22px; }
+    .grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+
+    .card{ background: var(--card); border-radius: var(--br); padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+    .card h2{ margin: 0 0 12px; font-size:16px; color:#dfe7f5; }
+
+    label{ display:block; color: var(--muted); margin: 8px 0 6px; }
+    input, select, textarea{
+      width:100%; background: #0c1016; color:var(--text); border:1px solid #242a36;
+      border-radius: 10px; padding: 10px; outline: none;
+    }
+    input::placeholder{ color:#718096; }
+    .row{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      background: #2a62ff; color:#fff; border:none; border-radius:10px; padding:10px 12px;
+      cursor:pointer; font-weight:600; box-shadow: 0 6px 16px rgba(42,98,255,.35);
+    }
+    .btn.grey{ background:#3a4252; box-shadow:none; }
+    .btn.warn{ background:#f39c12; }
+    .btn.ok{ background:#2ecc71; }
+    .btn.err{ background:#e74c3c; }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; }
+
+    .log{ background:#0c1016; border:1px solid #242a36; border-radius:10px; padding:10px; height: 160px; overflow:auto; white-space: pre-wrap; }
+    .muted{ color: var(--muted); }
+    .pill{ display:inline-block; padding: 3px 8px; border-radius: 999px; background:#1c2333; border:1px solid #2a3350; color:#c6d2ff; font-size:12px; }
+    footer{ margin-top:16px; color:var(--muted); font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>WB SKU Checker — Админка лицензий</h1>
+
+    <div class="grid">
+      <!-- Создать ключ -->
+      <section class="card">
+        <h2>Создать ключ</h2>
+        <label>Тариф</label>
+        <select id="plan">
+          <option value="week">week (7д)</option>
+          <option value="month" selected>month (30д)</option>
+          <option value="year">year (365д)</option>
+          <option value="test">test (3д)</option>
+        </select>
+        <div class="row">
+          <div>
+            <label>Дней (необязательно)</label>
+            <input id="days" type="number" placeholder="напр. 14" />
+          </div>
+          <div>
+            <label>DeviceID (необязательно)</label>
+            <input id="device" type="text" placeholder="dev_xxx — привязать к устройству" />
+          </div>
+        </div>
+        <label>Примечание</label>
+        <input id="note" type="text" placeholder="комментарий" />
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <button class="btn" id="btnCreate">Создать</button>
+          <button class="btn grey" id="btnClearCreate">Очистить</button>
+        </div>
+        <div style="margin-top:10px;">
+          <div class="muted">Результат</div>
+          <div id="createOut" class="log"></div>
+        </div>
+      </section>
+
+      <!-- Продлить ключ -->
+      <section class="card">
+        <h2>Продлить ключ</h2>
+        <label>Ключ</label>
+        <input id="extKey" type="text" placeholder="SKU-..."/>
+        <label>Дней прибавить</label>
+        <input id="extDays" type="number" value="30" />
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <button class="btn ok" id="btnExtend">Продлить</button>
+        </div>
+        <div style="margin-top:10px;">
+          <div class="muted">Результат</div>
+          <div id="extendOut" class="log"></div>
+        </div>
+      </section>
+
+      <!-- Активировать/деактивировать -->
+      <section class="card">
+        <h2>Статус ключа</h2>
+        <label>Ключ</label>
+        <input id="stKey" type="text" placeholder="SKU-..."/>
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <button class="btn ok"  id="btnActivate">Активировать</button>
+          <button class="btn err" id="btnDeactivate">Отключить</button>
+        </div>
+        <div style="margin-top:10px;">
+          <div class="muted">Результат</div>
+          <div id="statusOut" class="log"></div>
+        </div>
+      </section>
+
+      <!-- Привязать к устройству + Info -->
+      <section class="card">
+        <h2>Привязка / Инфо</h2>
+        <label>Ключ</label>
+        <input id="bindKey" type="text" placeholder="SKU-..."/>
+        <label>DeviceID</label>
+        <input id="bindDevice" type="text" placeholder="dev_xxx"/>
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <button class="btn warn" id="btnBind">Привязать</button>
+          <button class="btn grey" id="btnInfo">Info</button>
+        </div>
+        <div style="margin-top:10px;">
+          <div class="muted">Результат</div>
+          <div id="bindOut" class="log"></div>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      Сервер по умолчанию: <span class="pill" id="baseUrl"></span>
+    </footer>
+  </div>
+
+  <script>
+    // --- базовый URL сервера (меняй при необходимости) ---
+    const BASE = location.origin; // если admin.html отдается сервером
+    //const BASE = 'http://localhost:3000'; // если открываешь файл напрямую с диска
+
+    document.getElementById('baseUrl').textContent = BASE;
+
+    // Помощники
+    const $ = (id) => document.getElementById(id);
+    const pretty = (obj) => JSON.stringify(obj, null, 2);
+    const out = (el, data) => el.textContent = typeof data === 'string' ? data : pretty(data);
+
+    async function post(path, body) {
+      const r = await fetch(BASE + path, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify(body || {})
+      });
+      const t = await r.text();
+      try { return JSON.parse(t); } catch { return { ok:false, raw:t }; }
+    }
+    async function get(path, params={}) {
+      const q = new URLSearchParams(params).toString();
+      const r = await fetch(BASE + path + (q?('?'+q):''), { method:'GET' });
+      const t = await r.text();
+      try { return JSON.parse(t); } catch { return { ok:false, raw:t }; }
+    }
+
+    // Создание
+    $('btnCreate').onclick = async () => {
+      const plan = $('plan').value;
+      const days = $('days').value ? Number($('days').value) : undefined;
+      const device = $('device').value || undefined;
+      const note = $('note').value || undefined;
+      const data = await post('/api/admin/create', { plan, days, device, note });
+      out($('createOut'), data);
+    };
+    $('btnClearCreate').onclick = () => {
+      ['days','device','note'].forEach(id => $(id).value = '');
+      out($('createOut'), '');
+    };
+
+    // Продление
+    $('btnExtend').onclick = async () => {
+      const key = $('extKey').value.trim();
+      const days = Number($('extDays').value || 30);
+      if (!key) return out($('extendOut'), 'Введите ключ');
+      const data = await post('/api/admin/extend', { key, days });
+      out($('extendOut'), data);
+    };
+
+    // Актив/деактив
+    $('btnActivate').onclick = async () => {
+      const key = $('stKey').value.trim();
+      if (!key) return out($('statusOut'), 'Введите ключ');
+      const data = await post('/api/admin/set-active', { key, isActive: 1 });
+      out($('statusOut'), data);
+    };
+    $('btnDeactivate').onclick = async () => {
+      const key = $('stKey').value.trim();
+      if (!key) return out($('statusOut'), 'Введите ключ');
+      const data = await post('/api/admin/set-active', { key, isActive: 0 });
+      out($('statusOut'), data);
+    };
+
+    // Привязка и Info
+    $('btnBind').onclick = async () => {
+      const key = $('bindKey').value.trim();
+      const device = $('bindDevice').value.trim();
+      if (!key || !device) return out($('bindOut'), 'Нужны ключ и device');
+      const data = await post('/api/admin/bind-device', { key, device });
+      out($('bindOut'), data);
+    };
+    $('btnInfo').onclick = async () => {
+      const key = $('bindKey').value.trim();
+      if (!key) return out($('bindOut'), 'Введите ключ');
+      const data = await get('/api/admin/info', { key });
+      out($('bindOut'), data);
+    };
+  </script>
+</body>
+</html>
